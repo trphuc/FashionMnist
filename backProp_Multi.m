@@ -1,57 +1,44 @@
-function [weights,biases] = backProp_Multi(inputs,targets,layers,input_neurons,hidden_neurons,hidden_neurons2,output_neurons,epoch, learning_rate)
+function [weights,biases] = backProp_Multi(inputs,targets,input_neurons,hidden_neurons,hidden_neurons2,output_neurons,epoch, learning_rate)
 % Number of sample data
 k = size(inputs,1);
 arrayCost = zeros(epoch,1);
-arrayEpoch = zeros(epoch,1);
-%Initialize weight and bias matrices
-hidden_weights = rand(hidden_neurons,input_neurons)-0.5;
-hidden_weights2 = rand(hidden_neurons2,hidden_neurons)-0.5; 
-final_weights = rand(output_neurons,hidden_neurons2)-0.5;
-hidden_bias = rand(hidden_neurons,1)-0.5;
-hidden_bias2 = rand(hidden_neurons2,1)-0.5; 
-outputbias = rand(output_neurons,1)-0.5;
-
+neurons=[input_neurons,hidden_neurons,hidden_neurons2,output_neurons];
+[weights,biases]=initWeights(2,neurons);
 % Hold average cost
-avgCost = 0;
 % Iteration epoch number 
 for j = 1:epoch
 j
+avgCost = 0;
 % For each sample data 
 for i = 1:k
 % Feed forward
-weights={hidden_weights;hidden_weights2;final_weights};
-biases={hidden_bias;hidden_bias2;outputbias};
 [final_hiddens,final_output] = forward_Multi(inputs(i,:)',2,weights,biases);
-final_hidden = final_hiddens{1,1};
-final_hidden2 = final_hiddens{1,2};
-
 % Calculate error
 diff= (targets(:,i) - final_output);
-cost=0;
-for u = 1:length(diff)
-cost = cost + diff(u) ^ 2; 
-end
+% cost=0;
+% for u = 1:length(diff)
+% cost = cost + diff(u);
+% end
+% avgCost = avgCost + cost*cost/2;
+% Cross entropy error
+cost=crossentropy_loss(targets(:,i),final_output);
 avgCost = avgCost + cost;
 % Back-propagation start
 % Calculate sensitive value for each layer
-s_output = -2*diff .* (final_output .* (1-final_output)); 
-s_hidden2 = (final_hidden2 .* (1-final_hidden2)).*(final_weights'*s_output );
-s_hidden = (final_hidden .* (1-final_hidden)).*(hidden_weights2'*s_hidden2 );
+s=sensitive_softmax(diff,final_output,final_hiddens{1,2},final_hiddens{1,1},weights);
 % Update weight matrices
-hidden_weights = hidden_weights - learning_rate .* s_hidden * inputs(i,:);
-hidden_weights2 = hidden_weights2 - learning_rate .* s_hidden2 * final_hidden';
-final_weights = final_weights - learning_rate .*s_output * final_hidden2'; 
+weights{1,1} = weights{1,1} - learning_rate .* s{1,1} * inputs(i,:);
+weights{2,1} = weights{2,1} - learning_rate .* s{1,2} * final_hiddens{1,1}';
+weights{3,1} = weights{3,1} - learning_rate .*s{1,3} * final_hiddens{1,2}'; 
 % Update bias
-hidden_bias = hidden_bias -learning_rate*s_hidden;
-hidden_bias2 = hidden_bias2 -learning_rate*s_hidden2;
-outputbias = outputbias -learning_rate*s_output;
+biases{1,1} = biases{1,1} -learning_rate*s{1,1};
+biases{2,1} = biases{2,1} -learning_rate*s{1,2};
+biases{3,1}= biases{3,1} -learning_rate*s{1,3};
 % Back propagation end 
 end
 % Calculate mean square error
-avgCost =avgCost/k;
+avgCost =avgCost/k
 arrayCost(j)=avgCost;
 avgCost = 0;
-arrayEpoch(j)=j; 
-weights={hidden_weights;hidden_weights2;final_weights};
-biases={hidden_bias;hidden_bias2;outputbias};
+end
 end
